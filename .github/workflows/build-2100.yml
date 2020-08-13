@@ -1,21 +1,23 @@
-name: Build RM2100 R2100  1
+#修改TNAME: K2P-5.0 中的K2P-5.0为你需要编译的型号，注意名称要与configs/templates/目录下的名字相同
+name: RM2100 1
 
 on: 
   release:
     types: [published]
-#  push:
-#    tags:
-#    - 'v*'
+  push:
+    tags:
+    - 'v*'
   #  branches: 
   #    - master
-  schedule:
-    - cron: 0 17 * * 4
-#  watch:
-#    types: [started]
+#  schedule:
+#    - cron: 0 8 * * 5
+  watch:
+    types: [started]
 
 jobs:
   build:
     runs-on: ubuntu-18.04
+    if: github.event.repository.owner.id == github.event.sender.id
 
     steps:
     - name: Checkout
@@ -30,23 +32,21 @@ jobs:
         pkg-config zlib1g-dev libgmp3-dev libmpc-dev libmpfr-dev libncurses5-dev libltdl-dev wget
     - name: Clone source code
       run: |
-        cd toolchain-mipsel
+        git clone --depth=1 https://github.com/chongshengB/rt-n56u.git /opt/rt-n56u
+        cd /opt/rt-n56u/toolchain-mipsel
         sh dl_toolchain.sh
         mkdir -p /opt/images/
     - name: Build Firmware
       env:
-        TNAME: "RM2100 R2100"
+        TNAME: RM2100
       run: |
-        cwd=`pwd`
-        CONFIG_TOOLCHAIN_DIR=${cwd//\//\\\/}\\/toolchain-mipsel
-        cd trunk
-        for m in $TNAME;
-        do
-        if [ ! -f configs/templates/$m.config ] ; then
-        echo "configs/templates/$m.config not found "
+        cd /opt/rt-n56u/trunk
+        if [ ! -f configs/templates/$TNAME.config ] ; then
+        echo "configs/templates/$TNAME.config not found "
         exit 1
         fi
-        cp -f configs/templates/$m.config .config
+        cp -f configs/templates/$TNAME.config .config
+        sed -i 's/CONFIG_FIRMWARE_INCLUDE_OPENSSL_EXE=n/CONFIG_FIRMWARE_INCLUDE_OPENSSL_EXE=y/g' .config
         #####################################################################################
         sed -i '/CONFIG_FIRMWARE_INCLUDE_MENTOHUST/d' .config #删除配置项MENTOHUST
         sed -i '/CONFIG_FIRMWARE_INCLUDE_SOFTETHERVPN_SERVER/d' .config #删除配置项SOFTETHERVPN
